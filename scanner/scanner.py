@@ -26,10 +26,25 @@ _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
+        "Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;"
+        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
     ),
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Sec-Ch-Ua": '"Chromium";v="125", "Google Chrome";v="125", "Not-A.Brand";v="99"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "DNT": "1",
 }
 
 GTM_ID_RE = re.compile(r"GTM-[A-Z0-9]+")
@@ -116,10 +131,12 @@ def scan_url(url: str, timeout: int = 12) -> ScanResult:
     result = ScanResult(url=url, canonical_url=url, scan_timestamp=timestamp, duration_seconds=0)
 
     # ── Fetch the page ──────────────────────────────────────────────────────
+    session = requests.Session()
+    session.headers.update(_HEADERS)
+
     try:
-        resp = requests.get(
+        resp = session.get(
             url,
-            headers=_HEADERS,
             timeout=timeout,
             allow_redirects=True,
             verify=True,
@@ -127,14 +144,36 @@ def scan_url(url: str, timeout: int = 12) -> ScanResult:
         result.canonical_url = resp.url
         result.status_code = resp.status_code
 
-        if resp.status_code >= 400:
-            result.error = f"Server returned HTTP {resp.status_code}. The page may require authentication or be blocked."
+        if resp.status_code == 403:
+            # Retry once without Sec-* headers (some WAFs reject them from non-browsers)
+            stripped = {k: v for k, v in _HEADERS.items() if not k.startswith("Sec-")}
+            resp2 = session.get(url, headers=stripped, timeout=timeout, allow_redirects=True, verify=True)
+            if resp2.status_code < 400:
+                resp = resp2
+                result.status_code = resp.status_code
+            else:
+                result.error = (
+                    "HTTP 403 — the server is blocking automated requests (Cloudflare or WAF). "
+                    "Try a different page on the same domain (e.g. /about or /services) "
+                    "or check a page that doesn't sit behind bot protection."
+                )
+                result.duration_seconds = round(time.time() - start, 2)
+                return result
+
+        elif resp.status_code >= 400:
+            result.error = (
+                f"Server returned HTTP {resp.status_code}. "
+                "The page may require authentication or be unavailable."
+            )
             result.duration_seconds = round(time.time() - start, 2)
             return result
 
         content_type = resp.headers.get("Content-Type", "")
         if "html" not in content_type.lower():
-            result.error = f"URL returned non-HTML content ({content_type}). Please enter a web page URL."
+            result.error = (
+                f"URL returned non-HTML content ({content_type}). "
+                "Please enter a standard web page URL."
+            )
             result.duration_seconds = round(time.time() - start, 2)
             return result
 
@@ -156,6 +195,8 @@ def scan_url(url: str, timeout: int = 12) -> ScanResult:
         result.error = f"Scan error: {str(e)}"
         result.duration_seconds = round(time.time() - start, 2)
         return result
+    finally:
+        session.close()
 
     # ── Parse HTML ──────────────────────────────────────────────────────────
     try:

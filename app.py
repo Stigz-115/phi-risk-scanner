@@ -591,8 +591,16 @@ if "scan_result" in st.session_state:
 
     # ── Error state ────────────────────────────────────────────────────────
     if result.error:
+        tip = ""
+        if "403" in result.error or "blocking" in result.error:
+            tip = (
+                "<br><br><strong>Tips:</strong><br>"
+                "· Try an interior page: <code>https://example.com/services</code> or <code>/about</code><br>"
+                "· Some homepages sit behind Cloudflare — sub-pages often don't<br>"
+                "· Make sure the URL is publicly accessible (no login required)"
+            )
         st.markdown(
-            f'<div class="error-box"><strong>Scan failed</strong><br>{result.error}</div>',
+            f'<div class="error-box"><strong>Scan failed</strong><br>{result.error}{tip}</div>',
             unsafe_allow_html=True,
         )
 
