@@ -33,6 +33,10 @@ class PHIReport(FPDF):
         self.set_margins(16, 16, 16)
         self.set_auto_page_break(auto=True, margin=16)
 
+    def normalize_text(self, text: str) -> str:
+        """Override to gracefully handle characters outside Latin-1."""
+        return _safe(text)
+
     def header(self):
         # Dark header bar
         self.set_fill_color(*_DARK_BG)
@@ -64,6 +68,9 @@ class PHIReport(FPDF):
         )
 
     # ── Helpers ─────────────────────────────────────────────────────────────
+
+    def _s(self, text: str) -> str:
+        return _safe(text)
 
     def section_title(self, title: str):
         self.set_font("Helvetica", "B", 9)
@@ -161,9 +168,40 @@ class PHIReport(FPDF):
         self.ln(3)
 
 
+def _safe(text: str) -> str:
+    """Strip/replace characters outside Latin-1 for fpdf Helvetica compatibility."""
+    return (
+        text
+        .replace("\u2014", "--")   # em dash
+        .replace("\u2013", "-")    # en dash
+        .replace("\u2019", "'")    # right single quote
+        .replace("\u2018", "'")    # left single quote
+        .replace("\u201C", '"')    # left double quote
+        .replace("\u201D", '"')    # right double quote
+        .replace("\u2022", "*")    # bullet
+        .replace("\u00B7", ".")    # middle dot
+        .encode("latin-1", errors="replace")
+        .decode("latin-1")
+    )
+
+
 def generate_pdf(scan_result: dict) -> bytes:
     pdf = PHIReport(scan_result)
     pdf.add_page()
+
+    # Sanitize all strings for Latin-1 (fpdf Helvetica encoding)
+    import copy
+
+    def _sanitize(obj):
+        if isinstance(obj, str):
+            return _safe(obj)
+        if isinstance(obj, list):
+            return [_sanitize(i) for i in obj]
+        if isinstance(obj, dict):
+            return {k: _sanitize(v) for k, v in obj.items()}
+        return obj
+
+    scan_result = _sanitize(copy.deepcopy(scan_result))
 
     findings = scan_result.get("findings", [])
     overall = scan_result.get("overall_risk", "clean")
