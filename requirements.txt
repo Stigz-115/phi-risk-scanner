@@ -4,3 +4,4 @@ beautifulsoup4
 tldextract
 fpdf2
 lxml
+plotly
