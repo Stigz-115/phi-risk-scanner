@@ -281,6 +281,36 @@ with left:
         help="Average revenue per patient over their care relationship",
     )
 
+    st.markdown('<div class="panel-title" style="margin-top:1.5rem">Patient Loss Model</div>', unsafe_allow_html=True)
+    patient_model = st.radio(
+        "Patient loss model",
+        ["Efficiency Loss (default)", "CPL-Based"],
+        horizontal=True,
+        label_visibility="collapsed",
+        help="Efficiency Loss divides forfeited ad spend by LTV. CPL-Based uses your actual cost-per-lead and tracks signal-driven CPL increase.",
+    )
+
+    if patient_model == "CPL-Based":
+        cpl_current = st.number_input(
+            "Current CPL with signals ($)",
+            min_value=10, max_value=50_000,
+            value=250, step=10,
+            help="Your actual cost to acquire one patient lead today, with full tracking intact.",
+        )
+        cpl_degradation_pct = st.slider(
+            "CPL increase without signals  %", 5, 150, 40, 5,
+            help="How much your CPL rises when conversion signals degrade. "
+                 "Healthcare benchmark: 30–60% for Google Smart Bidding; higher for Meta Advantage+.",
+        )
+        lead_to_patient_pct = st.slider(
+            "Lead-to-patient conversion rate  %", 1, 80, 20, 1,
+            help="% of leads that become paying patients.",
+        )
+    else:
+        cpl_current = 250
+        cpl_degradation_pct = 40
+        lead_to_patient_pct = 20
+
     st.markdown('<div class="panel-title" style="margin-top:1.5rem">Sensitivity</div>', unsafe_allow_html=True)
 
     roas_deg_pct = st.slider(
@@ -327,9 +357,24 @@ net_savings     = total_dark_cost - freshpaint_cost
 roi_multiple    = total_dark_cost / freshpaint_cost if freshpaint_cost > 0 else 0
 payback_months  = (freshpaint_cost / (total_dark_cost / 12)) if total_dark_cost > 0 else 0
 
-# Patients lost estimate
-blended_deg = (roas_loss + rmkt_loss) / annual_spend if annual_spend > 0 else 0
-patients_lost_est = (annual_spend * blended_deg) / patient_ltv if patient_ltv > 0 else 0
+# Patients lost estimate — two models
+if patient_model == "CPL-Based":
+    # CPL model: how many fewer patients do you acquire due to CPL inflation?
+    cpl_degraded   = cpl_current * (1 + cpl_degradation_pct / 100)
+    cpl_delta      = cpl_degraded - cpl_current          # extra cost per lead
+    leads_per_year = annual_spend / cpl_current           # leads you buy today
+    leads_lost     = annual_spend / cpl_degraded          # leads you can afford at higher CPL
+    gross_leads_lost = leads_per_year - leads_lost        # leads forfeited by signal loss
+    patients_lost_est = gross_leads_lost * (lead_to_patient_pct / 100)
+    patient_loss_basis = (
+        f"CPL rises {cpl_degradation_pct}% (${cpl_current:,} → ${cpl_degraded:,.0f}) · "
+        f"{lead_to_patient_pct}% lead-to-patient rate"
+    )
+else:
+    # Efficiency loss model (original)
+    blended_deg = (roas_loss + rmkt_loss) / annual_spend if annual_spend > 0 else 0
+    patients_lost_est = (annual_spend * blended_deg) / patient_ltv if patient_ltv > 0 else 0
+    patient_loss_basis = f"Efficiency loss / ${patient_ltv:,} LTV"
 
 # ── Results panel ─────────────────────────────────────────────────────────────
 with right:
@@ -510,8 +555,18 @@ rows = [
     ("Net annual savings",          net_str,                    "Dark cost minus Freshpaint investment"),
     ("ROI multiple",                f"{roi_multiple:.1f}x",     "Dark cost ÷ Freshpaint cost"),
     ("Payback period",              payback_str,                "Freshpaint cost ÷ monthly dark cost"),
-    ("Est. patients lost/yr",       f"~{int(patients_lost_est):,}", f"Efficiency loss ÷ ${patient_ltv:,} LTV"),
 ]
+if patient_model == "CPL-Based":
+    rows += [
+        ("CPL (with signals)",          f"${cpl_current:,}",          "Your current cost per lead"),
+        ("CPL (without signals)",       f"${cpl_degraded:,.0f}",       f"+{cpl_degradation_pct}% signal degradation"),
+        ("Annual leads forfeited",      f"~{int(gross_leads_lost):,}", "Leads lost to CPL inflation"),
+        ("Est. patients lost/yr",       f"~{int(patients_lost_est):,}", patient_loss_basis),
+    ]
+else:
+    rows += [
+        ("Est. patients lost/yr",       f"~{int(patients_lost_est):,}", patient_loss_basis),
+    ]
 
 table_html = """
 <table style="width:100%;border-collapse:collapse;font-size:0.75rem">
