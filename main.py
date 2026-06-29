@@ -17,10 +17,11 @@ scanner_page = st.Page("app.py",                       title="PHI Risk Scanner",
 roi_page     = st.Page("pages/2_ROI_Calculator.py",    title="ROI Calculator",          icon="📊")
 deck_page    = st.Page("pages/3_Stakeholder_Deck.py",  title="Stakeholder Decks",       icon="📋")
 privacy_page = st.Page("pages/4_State_Privacy.py",     title="State Privacy Scorecard", icon="🗺️")
+comp_page    = st.Page("pages/5_Competitive.py",        title="Competitive Comparison",  icon="⚔️")
 
 # Hidden nav — routing only, we render our own sidebar links
 pg = st.navigation(
-    [scanner_page, roi_page, deck_page, privacy_page],
+    [scanner_page, roi_page, deck_page, privacy_page, comp_page],
     position="hidden",
 )
 
@@ -164,6 +165,7 @@ with st.sidebar:
     st.page_link("pages/2_ROI_Calculator.py",    label="ROI Calculator",          icon="📊")
     st.page_link("pages/3_Stakeholder_Deck.py",  label="Stakeholder Decks",       icon="📋")
     st.page_link("pages/4_State_Privacy.py",     label="State Privacy Scorecard", icon="🗺️")
+    st.page_link("pages/5_Competitive.py",        label="Competitive Comparison",  icon="⚔️")
 
     # ── Sidebar footer ────────────────────────────────────────────────────────
     st.markdown("""
