@@ -64,17 +64,19 @@ html, body, [class*="css"] {
 
 /* ── Input panel ── */
 .input-panel {
-    background: rgba(12,22,42,0.75);
-    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(12,22,42,0.9);
+    border: 1px solid rgba(0,255,178,0.18);
+    border-top: 2px solid rgba(0,255,178,0.45);
     border-radius: 4px;
     padding: 1.5rem;
     height: 100%;
+    box-shadow: 0 0 24px rgba(0,255,178,0.04), inset 0 1px 0 rgba(0,255,178,0.08);
 }
 .panel-title {
     font-family: 'Syne', sans-serif; font-size:0.65rem; font-weight:700;
     letter-spacing:0.3em; text-transform:uppercase;
-    color:rgba(0,255,178,0.6);
-    border-bottom: 1px solid rgba(0,255,178,0.1);
+    color:rgba(0,255,178,0.75);
+    border-bottom: 1px solid rgba(0,255,178,0.15);
     padding-bottom: 0.6rem; margin-bottom:1.2rem;
 }
 
@@ -238,8 +240,31 @@ ORG_PROFILES = {
 # ── Layout: inputs left, results right ───────────────────────────────────────
 left, right = st.columns([1, 1.25], gap="large")
 
+# Make the left column visually distinct as an input panel
+st.markdown("""
+<style>
+/* Target the first column block — input panel highlight */
+div[data-testid="stHorizontalBlock"] > div:first-child > div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(10,20,40,0.92) !important;
+    border: 1px solid rgba(0,255,178,0.22) !important;
+    border-top: 2px solid rgba(0,255,178,0.5) !important;
+    border-radius: 6px !important;
+    padding: 0.25rem 0.5rem !important;
+    box-shadow: 0 0 28px rgba(0,255,178,0.05), inset 0 1px 0 rgba(0,255,178,0.1) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 with left:
-    st.markdown('<div class="panel-title">Your Numbers</div>', unsafe_allow_html=True)
+    st.html("""
+    <div style="font-family:Syne,sans-serif;font-size:0.6rem;font-weight:700;
+                letter-spacing:0.35em;text-transform:uppercase;
+                color:rgba(0,255,178,0.5);margin-bottom:0.2rem;
+                padding:0.6rem 0 0.4rem;border-bottom:1px solid rgba(0,255,178,0.12)">
+      ← Adjust inputs
+    </div>
+    """)
+    st.markdown('<div class="panel-title" style="margin-top:1rem">Your Numbers</div>', unsafe_allow_html=True)
 
     monthly_spend = st.number_input(
         "Monthly ad spend ($)",
