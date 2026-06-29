@@ -334,7 +334,7 @@ patients_lost_est = (annual_spend * blended_deg) / patient_ltv if patient_ltv > 
 # ── Results panel ─────────────────────────────────────────────────────────────
 with right:
     # Hero number
-    st.markdown(f"""
+    st.html(f"""
     <div class="result-hero">
       <div class="result-label">Annual cost of going dark</div>
       <div class="result-value">${total_dark_cost:,.0f}</div>
@@ -342,10 +342,10 @@ with right:
         based on ${monthly_spend:,}/mo spend · {org_type}
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # Three cost drivers
-    st.markdown(f"""
+    st.html(f"""
     <div class="metric-card mc-roas">
       <div class="mc-label">ROAS Signal Degradation</div>
       <div class="mc-value" style="color:#FF2D55">${roas_loss:,.0f}<span style="font-size:0.9rem;color:rgba(232,237,245,0.3)">/yr</span></div>
@@ -362,7 +362,7 @@ with right:
       <div class="mc-desc">
         Without cross-channel attribution, budget flows to last-click channels (brand search)
         and away from upper-funnel channels that actually drive volume.
-        {attr_waste_pct}% waste rate · Forrester benchmark: 15–20%.
+        {attr_waste_pct}% waste rate · Forrester benchmark: 15-20%.
       </div>
     </div>
 
@@ -371,18 +371,18 @@ with right:
       <div class="mc-value" style="color:#FFD60A">${rmkt_loss:,.0f}<span style="font-size:0.9rem;color:rgba(232,237,245,0.3)">/yr</span></div>
       <div class="mc-desc">
         Remarketing converts {remarketing_lift}% better than cold prospecting.
-        Without pixel data, retargeting audiences degrade within 30–90 days.
+        Without pixel data, retargeting audiences degrade within 30-90 days.
         {remarketing_pct}% of budget on remarketing.
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # ROI callout
     payback_str = f"{payback_months:.1f} mo" if payback_months < 12 else f"{payback_months/12:.1f} yr"
     net_str     = f"${net_savings:,.0f}" if net_savings >= 0 else f"-${abs(net_savings):,.0f}"
     net_color   = "#00FFB2" if net_savings >= 0 else "#FF2D55"
 
-    st.markdown(f"""
+    st.html(f"""
     <div class="roi-callout">
       <div class="roi-stat">
         <div class="roi-stat-num">{roi_multiple:.1f}x</div>
@@ -401,7 +401,7 @@ with right:
         <div class="roi-stat-label">Patients Lost/yr</div>
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
 # ── Chart ─────────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-head">Cost Breakdown vs. Fix</div>', unsafe_allow_html=True)
@@ -540,10 +540,10 @@ for i, (label, value, basis) in enumerate(rows):
       <td style="padding:0.45rem 0.75rem;color:rgba(232,237,245,0.3);font-size:0.68rem">{basis}</td>
     </tr>"""
 table_html += "</tbody></table>"
-st.markdown(table_html, unsafe_allow_html=True)
+st.html(table_html)
 
 # ── CTA ───────────────────────────────────────────────────────────────────────
-st.markdown(f"""
+st.html(f"""
 <div class="cta-block">
   <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;
               color:#E8EDF5;margin-bottom:0.5rem">
@@ -553,17 +553,17 @@ st.markdown(f"""
   <div style="font-size:0.78rem;color:rgba(232,237,245,0.45);max-width:560px;
               margin:0 auto 1.2rem;line-height:1.7">
     Freshpaint intercepts tracking events, strips PHI, and routes clean data to your existing
-    ad platforms and analytics stack — so your campaigns keep their optimization signals
+    ad platforms and analytics stack so your campaigns keep their optimization signals
     and your attribution stays intact. BAA included.
   </div>
   <a href="https://www.freshpaint.io" target="_blank"
      style="display:inline-block;font-size:0.75rem;font-weight:700;color:#05080F;
             background:#00FFB2;padding:0.7rem 2rem;border-radius:3px;text-decoration:none;
             letter-spacing:0.1em;text-transform:uppercase">
-    Talk to Freshpaint →
+    Talk to Freshpaint
   </a>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
