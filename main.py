@@ -17,28 +17,14 @@ privacy_page = st.Page("pages/4_State_Privacy.py",     title="State Privacy Scor
 
 pg = st.navigation({"Freshpaint Tools": [scanner_page, roi_page, deck_page, privacy_page]}, position="sidebar")
 
-# Global CSS — sidebar toggle visibility + sidebar styling
+# Global CSS — lock sidebar open, hide collapse toggle
 st.markdown("""
 <style>
-/* ── Collapsed sidebar toggle: make it findable ── */
-button[data-testid="collapsedControl"] {
-    background: rgba(0,255,178,0.12) !important;
-    border: 1px solid rgba(0,255,178,0.45) !important;
-    border-radius: 4px !important;
-    width: 28px !important;
-    height: 52px !important;
-    box-shadow: 0 0 12px rgba(0,255,178,0.15) !important;
-    transition: background 0.2s, box-shadow 0.2s !important;
-}
-button[data-testid="collapsedControl"]:hover {
-    background: rgba(0,255,178,0.22) !important;
-    box-shadow: 0 0 20px rgba(0,255,178,0.3) !important;
-}
-button[data-testid="collapsedControl"] svg {
-    fill: #00FFB2 !important;
-    stroke: #00FFB2 !important;
-}
-/* ── Sidebar panel ── */
+/* Hide the sidebar collapse/expand toggle entirely */
+button[data-testid="collapsedControl"] { display: none !important; }
+[data-testid="stSidebarCollapseButton"] { display: none !important; }
+
+/* Sidebar styling */
 section[data-testid="stSidebar"] {
     background: #060A12 !important;
     border-right: 1px solid rgba(0,255,178,0.1) !important;
