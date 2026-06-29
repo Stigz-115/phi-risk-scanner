@@ -453,7 +453,7 @@ if net_savings > 0:
         x=["Freshpaint Fix"],
         y=[net_savings],
         marker_color="rgba(0,255,178,0.12)",
-        marker_line=dict(color="rgba(0,255,178,0.4)", width=1, dash="dot"),
+        marker_line=dict(color="rgba(0,255,178,0.4)", width=1),
         text=[f"${net_savings:,.0f} saved"],
         textposition="inside",
         textfont=dict(color="#00FFB2", size=10, family="IBM Plex Mono"),
