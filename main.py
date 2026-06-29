@@ -25,9 +25,13 @@ pg = st.navigation(
     position="hidden",
 )
 
-# ── Password gate (set APP_PASSWORD env var on Streamlit Cloud) ───────────────
+# ── Password gate (set APP_PASSWORD in Streamlit Cloud Secrets or local env) ──
 import os
-_APP_PASSWORD = os.environ.get("APP_PASSWORD", "freshpaint")
+_APP_PASSWORD = (
+    st.secrets.get("APP_PASSWORD")          # Streamlit Cloud secrets
+    or os.environ.get("APP_PASSWORD")       # local env var
+    or "freshpaint"                         # fallback default
+)
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
