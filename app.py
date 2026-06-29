@@ -8,15 +8,6 @@ from scanner.scanner import scan_url
 from scanner.pdf_report import generate_pdf
 from scanner.registry import RISK_LABELS
 
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="PHI Risk Scanner | Freshpaint",
-    page_icon="🔍",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    menu_items={"About": "PHI Risk Scanner by Freshpaint — freshpaint.io"},
-)
-
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>

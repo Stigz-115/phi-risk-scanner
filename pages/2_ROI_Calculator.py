@@ -6,13 +6,6 @@ Models the annual revenue impact of removing tracking pixels without replacing t
 import streamlit as st
 import plotly.graph_objects as go
 
-st.set_page_config(
-    page_title="ROI Calculator | Freshpaint",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
 # ── CSS (same design system as PHI Risk Scanner) ──────────────────────────────
 st.markdown("""
 <style>
