@@ -106,12 +106,10 @@ with st.sidebar:
     button[aria-label="Close sidebar"],
     button[aria-label="Collapse sidebar"],
     button[aria-label="open sidebar"],
-    section[data-testid="stSidebar"] button[kind="header"],
-    div[data-testid="stSidebarNav"] ~ div button { display: none !important; }
+    section[data-testid="stSidebar"] button[kind="header"] { display: none !important; }
 
-    /* ── Suppress Streamlit Cloud's injected auto-nav ── */
+    /* ── Suppress Streamlit Cloud's injected auto-nav only ── */
     div[data-testid="stSidebarNav"] { display: none !important; }
-    section[data-testid="stSidebar"] nav { display: none !important; }
 
     /* ── page_link nav items ── */
     a[data-testid="stPageLink-NavLink"] {
