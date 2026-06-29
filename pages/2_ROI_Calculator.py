@@ -416,7 +416,7 @@ fig.add_trace(go.Bar(
     marker_color="#FF2D55",
     text=[f"${roas_loss:,.0f}"],
     textposition="inside",
-    textfont=dict(color="white", size=11, family="IBM Plex Mono"),
+    textfont=dict(color="white", size=11),
 ))
 fig.add_trace(go.Bar(
     name="Attribution Waste",
@@ -425,7 +425,7 @@ fig.add_trace(go.Bar(
     marker_color="#FF8C00",
     text=[f"${attr_loss:,.0f}"],
     textposition="inside",
-    textfont=dict(color="white", size=11, family="IBM Plex Mono"),
+    textfont=dict(color="white", size=11),
 ))
 fig.add_trace(go.Bar(
     name="Remarketing Loss",
@@ -434,7 +434,7 @@ fig.add_trace(go.Bar(
     marker_color="#FFD60A",
     text=[f"${rmkt_loss:,.0f}"],
     textposition="inside",
-    textfont=dict(color="#05080F", size=11, family="IBM Plex Mono"),
+    textfont=dict(color="#05080F", size=11),
 ))
 # Freshpaint cost
 fig.add_trace(go.Bar(
@@ -444,7 +444,7 @@ fig.add_trace(go.Bar(
     marker_color="#00FFB2",
     text=[f"${freshpaint_cost:,.0f}"],
     textposition="inside",
-    textfont=dict(color="#05080F", size=11, family="IBM Plex Mono"),
+    textfont=dict(color="#05080F", size=11),
 ))
 # Net savings annotation bar
 if net_savings > 0:
@@ -456,7 +456,7 @@ if net_savings > 0:
         marker_line=dict(color="rgba(0,255,178,0.4)", width=1),
         text=[f"${net_savings:,.0f} saved"],
         textposition="inside",
-        textfont=dict(color="#00FFB2", size=10, family="IBM Plex Mono"),
+        textfont=dict(color="#00FFB2", size=10),
     ))
 
 fig.update_layout(
