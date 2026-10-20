@@ -7,7 +7,8 @@ and aggregates an overall exposure score with Freshpaint remediation context.
 import streamlit as st
 import plotly.graph_objects as go
 from scanner.state_privacy import (
-    STATE_DATA, NO_LAW_STATES, score_all_states, aggregate_exposure
+    STATE_DATA, NO_LAW_STATES, ALL_STATES, score_all_states, aggregate_exposure,
+    LAST_REVIEWED, STATUS_LABELS, days_since_review, load_watch
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -30,7 +31,8 @@ html, body, [class*="css"] {
     background-size: 48px 48px;
     pointer-events: none; z-index: 0;
 }
-#MainMenu, header[data-testid="stHeader"], footer { display: none !important; }
+#MainMenu, footer, [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"], [data-testid="stMainMenu"] { display: none !important; }
+header[data-testid="stHeader"] { background: transparent !important; }
 .block-container { padding-top: 0 !important; max-width: 1200px !important; }
 div[data-testid="stMultiSelect"] > div { background: #0C1628 !important; border: 1px solid rgba(0,255,178,0.2) !important; border-radius: 4px; }
 div[data-testid="stMultiSelect"] span { background: rgba(0,255,178,0.1) !important; color: #00FFB2 !important; }
@@ -68,7 +70,7 @@ st.html("""
 
 # ── State selector ────────────────────────────────────────────────────────────
 ALL_KNOWN = sorted(list(STATE_DATA.keys()) + NO_LAW_STATES)
-STATE_NAMES = {abbr: STATE_DATA[abbr]["name"] if abbr in STATE_DATA else abbr for abbr in ALL_KNOWN}
+STATE_NAMES = {abbr: ALL_STATES[abbr]["name"] for abbr in ALL_KNOWN}
 
 # Build display options: "CA — California" sorted by name
 OPTIONS = sorted(
@@ -77,40 +79,75 @@ OPTIONS = sorted(
 )
 ABBR_FROM_OPTION = {o: o.split(" — ")[0] for o in OPTIONS}
 
+_ALL_SCORES = score_all_states()
+_TOP5 = [a for a, _ in sorted(_ALL_SCORES.items(), key=lambda kv: kv[1]["score"], reverse=True)[:5]]
+_IN_EFFECT = [a for a, d in STATE_DATA.items() if d.get("status") == "in_effect"]
+
+_QUICK = {
+    "Top 5 Risk States": _TOP5,
+    "All Laws In Effect": _IN_EFFECT,
+    "All Active Law States": list(STATE_DATA.keys()),
+    "Clear All": [],
+}
+
+
+def _apply_quick_fill():
+    choice = st.session_state.get("_sp_quick")
+    if choice in _QUICK:
+        st.session_state["_sp_states"] = [o for o in OPTIONS if ABBR_FROM_OPTION[o] in _QUICK[choice]]
+    st.session_state["_sp_quick"] = "— Quick Add —"
+
+
 col_sel, col_btn = st.columns([4, 1])
 with col_sel:
     selected_options = st.multiselect(
         "States of operation",
         options=OPTIONS,
-        default=[],
+        key="_sp_states",
         placeholder="Select states where you operate, market, or serve patients…",
         label_visibility="collapsed",
     )
 with col_btn:
-    quick_fill = st.selectbox(
+    st.selectbox(
         "Quick fill",
-        ["— Quick Add —", "Top 5 Risk States", "All Active Law States", "Clear All"],
+        ["— Quick Add —", *_QUICK.keys()],
+        key="_sp_quick",
+        on_change=_apply_quick_fill,
         label_visibility="collapsed",
     )
 
 selected_abbrs = [ABBR_FROM_OPTION[o] for o in selected_options]
 
-# Quick fill logic
-if quick_fill == "Top 5 Risk States":
-    top5 = ["WA", "IL", "CA", "TX", "NY"]
-    st.session_state["_sp_default"] = [o for o in OPTIONS if ABBR_FROM_OPTION[o] in top5]
-    st.rerun()
-elif quick_fill == "All Active Law States":
-    st.session_state["_sp_default"] = [o for o in OPTIONS if ABBR_FROM_OPTION[o] in STATE_DATA]
-    st.rerun()
-elif quick_fill == "Clear All":
-    st.session_state["_sp_default"] = []
-    st.rerun()
+# ── Data freshness + legislation watch ───────────────────────────────────────
+_age = days_since_review()
+_watch = load_watch()
+_stale = _age is not None and _age > 45
+_fresh_color = "#E8B80A" if _stale else "rgba(0,255,178,0.55)"
+_watch_line = ""
+if _watch:
+    _n_moved = len(_watch.get("changed", []))
+    _watch_line = (f" · Legislation watch run {_watch.get('generated_at', '')[:10]}: "
+                   f"{_n_moved} tracked bill{'s' if _n_moved != 1 else ''} moved")
+st.html(f"""
+<div style="font-size:0.65rem;color:{_fresh_color};text-align:center;margin:0.25rem 0 0.5rem;
+            letter-spacing:0.05em">
+  State law data reviewed {LAST_REVIEWED}{' — review overdue' if _stale else ''}{_watch_line}
+</div>
+""")
+
+if _watch.get("changed"):
+    with st.expander(f"Legislation watch — {len(_watch['changed'])} bill(s) moved since last review"):
+        for bill in _watch["changed"][:25]:
+            st.markdown(
+                f"**{bill.get('state')} {bill.get('number')}** — {bill.get('title', '')}  \n"
+                f"Status: *{bill.get('status_label', '')}* · Last action {bill.get('last_action_date', '')}: "
+                f"{bill.get('last_action', '')} · [LegiScan]({bill.get('url', '')})"
+            )
 
 st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
 
 # ── Map ───────────────────────────────────────────────────────────────────────
-all_scores = score_all_states()
+all_scores = _ALL_SCORES
 
 # Build map data
 map_abbrs, map_colors, map_hover, map_text = [], [], [], []
@@ -130,7 +167,7 @@ for abbr, sc in all_scores.items():
     map_abbrs.append(abbr)
     map_colors.append(color)
 
-    d = STATE_DATA.get(abbr, {})
+    d = ALL_STATES.get(abbr, {})
     law = d.get("law", "No Active Law")
     eff = d.get("effective", "—")
     sel_marker = " ✓ SELECTED" if is_selected else ""
@@ -335,6 +372,9 @@ else:
               <span style="font-size:0.65rem;color:rgba(232,237,245,0.35);margin-left:8px">{b['abbr']}</span>
               {pr_badge}{tc_badge}
               <div style="font-size:0.7rem;color:rgba(232,237,245,0.5);margin-top:0.2rem">{b['law']}</div>
+              <div style="font-size:0.6rem;color:rgba(232,237,245,0.35);margin-top:0.25rem">
+                {b['status_label']} · Penalty: {b['penalty']} · HIPAA exemption: {b['hipaa_exemption']}
+              </div>
             </div>
             <div style="text-align:right;flex-shrink:0">
               <div style="font-family:Syne,sans-serif;font-size:1.6rem;font-weight:800;
@@ -403,7 +443,7 @@ else:
                        tickvals=[0, 1, 2, 3], ticktext=["0", "1", "2", "3 (Max)"]),
             legend=dict(
                 orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-                font=dict(size=10), bgcolor="transparent",
+                font=dict(size=10), bgcolor="rgba(0,0,0,0)",
             ),
             margin=dict(l=10, r=10, t=40, b=10),
             height=300,
@@ -449,14 +489,14 @@ else:
     """)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
-st.html("""
+st.html(f"""
 <div style="text-align:center;padding:2rem 1rem;margin-top:3rem;
             border-top:1px solid rgba(255,255,255,0.05);
             font-size:0.62rem;color:rgba(232,237,245,0.18);line-height:1.8">
   <a href="https://freshpaint.io" style="color:rgba(0,255,178,0.35);text-decoration:none">Freshpaint</a>
   · HIPAA-Compliant Healthcare Analytics ·
   <a href="https://freshpaint.io/blog" style="color:rgba(0,255,178,0.35);text-decoration:none">Blog</a>
-  <br>State law data is maintained for informational purposes and updated quarterly.
+  <br>State law data last reviewed {LAST_REVIEWED}; new legislation is checked monthly via LegiScan.
   Risk scores are directional. Not legal advice.
 </div>
 """)
