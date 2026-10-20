@@ -1,10 +1,10 @@
 # PHI Risk Scanner — Freshpaint pre-sales toolkit
 
-Streamlit app (`streamlit run main.py`) with five tools:
+Streamlit app (`streamlit run app.py`; on Streamlit Cloud the main file is `app.py`) with five tools:
 
 | Page | What it does |
 |---|---|
-| PHI Risk Scanner (`app.py`) | Scans a healthcare site for third-party trackers and PHI risk |
+| PHI Risk Scanner (`pages/1_PHI_Risk_Scanner.py`) | Scans a healthcare site for third-party trackers and PHI risk |
 | ROI Calculator | Cost of "going dark" vs. Freshpaint |
 | Stakeholder Deck Builder | Persona briefs (Executive, CMO, CFO, GC/CCO, Privacy/CISO, CTO) as PDFs and a PowerPoint deck; optionally cites trackers found on the prospect's site |
 | State Privacy Scorecard | 50 states + DC scored on health-data / tracking exposure |
