@@ -31,7 +31,8 @@ html, body, [class*="css"] {
     background-size: 48px 48px;
     pointer-events: none; z-index: 0;
 }
-#MainMenu, header[data-testid="stHeader"], footer { display: none !important; }
+#MainMenu, footer, [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"], [data-testid="stMainMenu"] { display: none !important; }
+header[data-testid="stHeader"] { background: transparent !important; }
 .block-container { padding-top: 0 !important; max-width: 1200px !important; }
 div[data-testid="stMultiSelect"] > div { background: #0C1628 !important; border: 1px solid rgba(0,255,178,0.2) !important; border-radius: 4px; }
 div[data-testid="stMultiSelect"] span { background: rgba(0,255,178,0.1) !important; color: #00FFB2 !important; }

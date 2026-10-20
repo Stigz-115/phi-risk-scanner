@@ -1,7 +1,8 @@
 """
 Entry point — multi-page navigation for Streamlit 1.35+
-Uses st.navigation(position="hidden") + manual st.sidebar so we own
-the sidebar entirely and can lock it open without fighting Streamlit internals.
+Uses st.navigation(position="hidden") + manual st.sidebar so we own the
+sidebar's look. Streamlit's collapse/expand toggle stays visible so the
+sidebar can always be reopened (e.g. after it auto-collapses on narrow screens).
 """
 import streamlit as st
 
@@ -27,8 +28,15 @@ pg = st.navigation(
 
 # ── Password gate (set APP_PASSWORD in Streamlit Cloud Secrets or local env) ──
 import os
+def _secret(name: str):
+    try:
+        return st.secrets.get(name)         # Streamlit Cloud secrets
+    except Exception:                       # no secrets.toml when running locally
+        return None
+
+
 _APP_PASSWORD = (
-    st.secrets.get("APP_PASSWORD")          # Streamlit Cloud secrets
+    _secret("APP_PASSWORD")
     or os.environ.get("APP_PASSWORD")       # local env var
     or "freshpaint"                         # fallback default
 )
@@ -104,14 +112,21 @@ with st.sidebar:
         padding-top: 1.25rem !important;
     }
 
-    /* ── Hide every known collapse/close button variant ──
-       Targets: local dev, Streamlit Cloud, all known versions */
-    button[data-testid="collapsedControl"],
-    button[data-testid="stSidebarCollapseButton"],
-    button[aria-label="Close sidebar"],
-    button[aria-label="Collapse sidebar"],
-    button[aria-label="open sidebar"],
-    section[data-testid="stSidebar"] button[kind="header"] { display: none !important; }
+    /* ── Sidebar toggle: keep the collapse (<<) and expand (>>) controls visible ── */
+    header[data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"],
+    [data-testid="stMainMenu"] { display: none !important; }
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stExpandSidebarButton"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] button {
+        color: #00FFB2 !important;
+    }
 
     /* ── Suppress Streamlit Cloud's injected auto-nav only ── */
     div[data-testid="stSidebarNav"] { display: none !important; }
@@ -173,9 +188,8 @@ with st.sidebar:
 
     # ── Sidebar footer ────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="position:absolute;bottom:1.5rem;left:0;right:0;
-                padding:0 1rem;border-top:1px solid rgba(255,255,255,0.05);
-                padding-top:1rem">
+    <div style="margin:1.5rem 0.5rem 0;padding:1rem 0.5rem 0;
+                border-top:1px solid rgba(255,255,255,0.05)">
       <a href="https://freshpaint.io" target="_blank"
          style="font-family:IBM Plex Mono,monospace;font-size:0.58rem;
                 color:rgba(0,255,178,0.35);text-decoration:none;letter-spacing:0.05em">

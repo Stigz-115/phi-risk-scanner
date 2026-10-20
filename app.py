@@ -38,7 +38,8 @@ html, body, [class*="css"] {
 }
 
 /* ── Hide Streamlit chrome ── */
-#MainMenu, header[data-testid="stHeader"], footer { display: none !important; }
+#MainMenu, footer, [data-testid="stToolbarActions"], [data-testid="stAppDeployButton"], [data-testid="stMainMenu"] { display: none !important; }
+header[data-testid="stHeader"] { background: transparent !important; }
 .block-container {
     padding-top: 0 !important;
     padding-bottom: 2rem !important;
