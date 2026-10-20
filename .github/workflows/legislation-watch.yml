@@ -1,0 +1,55 @@
+name: Monthly legislation watch
+
+# Runs on the 1st of every month (and on demand). Searches LegiScan for new or
+# changed state health-privacy bills and opens a pull request with a review
+# checklist. Nothing changes in the app until a human merges the PR.
+
+on:
+  schedule:
+    - cron: "17 13 1 * *"      # 13:17 UTC on the 1st (about 9am Eastern)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: legislation-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check LegiScan for new legislation
+        env:
+          LEGISCAN_API_KEY: ${{ secrets.LEGISCAN_API_KEY }}
+        run: python scripts/check_legislation.py --report "$RUNNER_TEMP/legislation_report.md"
+
+      - name: Validate state data
+        run: python scripts/validate_state_data.py
+
+      - name: Set run month
+        id: month
+        run: echo "value=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Open review pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: legislation-watch/${{ steps.month.outputs.value }}
+          delete-branch: true
+          commit-message: "chore: legislation watch ${{ steps.month.outputs.value }}"
+          title: "Legislation watch: ${{ steps.month.outputs.value }} state privacy review"
+          body-path: ${{ runner.temp }}/legislation_report.md
+          labels: legislation-watch
+          add-paths: scanner/data/legislation_watch.json

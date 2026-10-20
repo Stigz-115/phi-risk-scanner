@@ -2,6 +2,7 @@ streamlit
 requests
 beautifulsoup4
 tldextract
-fpdf2
+fpdf2>=2.7.8
 lxml
 plotly
+python-pptx

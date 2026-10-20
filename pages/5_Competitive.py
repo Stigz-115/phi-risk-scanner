@@ -257,6 +257,12 @@ for col, key in zip(gap_cols, selected_keys):
         f'border-bottom:1px solid rgba(255,255,255,0.04)">+ {w}</div>'
         for w in c.get("win_reasons", [])
     )
+    verified_html = ""
+    if c.get("last_verified"):
+        links = " · ".join(f'<a href="{u}" target="_blank" style="color:rgba(0,255,178,0.4)">source {i + 1}</a>'
+                           for i, u in enumerate(c.get("sources", [])))
+        verified_html = (f'<div style="margin-top:0.4rem;font-size:0.58rem;color:rgba(232,237,245,0.25)">'
+                         f'Researched {c["last_verified"]} from public sources · {links}</div>')
     col.html(f"""
     <div style="background:rgba(12,22,42,0.6);border:1px solid rgba(255,255,255,0.06);
                 border-radius:4px;padding:1rem 1.1rem">
@@ -268,12 +274,19 @@ for col, key in zip(gap_cols, selected_keys):
                   padding-top:0.5rem">
         <span style="color:rgba(212,43,74,0.6);font-weight:700">Gap: </span>{c['honest_gaps']}
       </div>
+      {verified_html}
     </div>
     """)
 
 # ── CTA ───────────────────────────────────────────────────────────────────────
 total_adv = sum(len(freshpaint_advantages(k)) for k in selected_keys)
 total_feat = len(FEATURES) * len(selected_keys)
+if "ours_privacy" in selected_keys:
+    summary_line = ("Ours Privacy matches Freshpaint's core architecture, so win on total cost at the tier the "
+                    "prospect actually needs, healthcare track record, and references in their segment.")
+else:
+    summary_line = ("No other vendor in this comparison combines HIPAA BAA, automatic PHI redaction, ad signal "
+                    "preservation, and healthcare-first support in a single deployment.")
 
 st.html(f"""
 <div style="background:linear-gradient(135deg,rgba(0,255,178,0.06),rgba(26,139,255,0.04));
@@ -288,8 +301,7 @@ st.html(f"""
   </div>
   <div style="font-size:0.75rem;color:rgba(232,237,245,0.4);max-width:560px;
               margin:0 auto 1.25rem;line-height:1.7">
-    No other vendor combines HIPAA BAA, automatic PHI redaction, ad signal
-    preservation, and healthcare-first support in a single deployment.
+    {summary_line}
   </div>
   <div style="display:inline-flex;gap:0.75rem;flex-wrap:wrap;justify-content:center">
     <a href="https://freshpaint.io/demo" target="_blank"

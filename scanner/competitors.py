@@ -259,6 +259,101 @@ COMPETITORS = {
         "key_objection": "We use Heap/Mixpanel for analytics",
         "counter": "Heap/Mixpanel are product analytics tools — great for understanding user flows in your app. Freshpaint solves a different problem: HIPAA-compliant marketing attribution and ad platform signal preservation. They're complementary; Freshpaint can route clean events to Mixpanel.",
     },
+    "ours_privacy": {
+        "name":      "Ours Privacy",
+        "category":  "HIPAA CDP & Server-Side Tag Manager",
+        "tagline":   "Closest look-alike: a BAA-covered CDP that strips PHI before ad platforms — with key features gated to Enterprise.",
+        "color":     "#F5A524",
+        "logo_char": "OP",
+        "pricing":   "Quote only; tiers by monthly tracked users (Essential ≤50K → Enterprise+)",
+        "deploy":    "Days (vendor claim; EHR add-on 4–6 weeks)",
+        "baa":       "Included on all tiers",
+        "ideal_for": "Digital health / DTC brands wanting an all-in-one HIPAA marketing stack",
+        "scores": {
+            "hipaa_baa":      2,
+            "phi_redaction":  2,
+            "hc_first":       2,
+            "ocr_defensible": 2,
+            "state_laws":     1,
+            "google_capi":    2,
+            "meta_capi":      2,
+            "attribution":    2,
+            "ga4_compat":     2,
+            "cdp_compat":     2,
+            "ehr_int":        1,
+            "consent_mgmt":   1,
+            "audit_trail":    2,
+            "no_code":        2,
+            "time_to_value":  2,
+            "support":        2,
+        },
+        "win_reasons": [
+            "Same core architecture (BAA + PHI stripping + server-side routing)",
+            "Bundles consent, A/B testing, session replay, heatmaps (mostly add-ons)",
+            "Momentum: $15M Series A (Aug 2026), 200+ customers claimed",
+            "Runs a dedicated 'Freshpaint alternative' migration program",
+        ],
+        "honest_gaps": "Integrated consent manager, EHR integrations, programmatic/DSP destinations and SSO are Enterprise-only; "
+                       "analytics, A/B testing and session replay are add-ons; Essential allows only one destination beyond "
+                       "GA4/Google Ads/Meta. No public pricing. Founded 2024 with limited third-party reviews; EHR connectivity "
+                       "runs through a partner. US-only hosting.",
+        "key_objection": "Ours Privacy does what Freshpaint does, plus consent, A/B testing and session replay",
+        "counter": "On architecture they're comparable — don't argue that. Win on total cost and fit: ask the prospect for an "
+                   "all-in Ours quote at the tier that includes the features they want (integrated consent, EHR, SSO and extra "
+                   "destinations sit at Enterprise; analytics, testing and replay are add-ons). Then compare Freshpaint's "
+                   "track record, customer references in their segment, and depth of healthcare destinations. Use Freshpaint's "
+                   "own verified pricing and integration list — don't guess at theirs.",
+        "last_verified": "2026-10-20",
+        "sources": ["https://oursprivacy.com/pricing", "https://security.oursprivacy.com/",
+                    "https://www.fiercehealthcare.com/health-tech/hipaa-compliant-marketing-platform-ours-privacy-lands-15m"],
+    },
+    "piwik_pro": {
+        "name":      "Piwik PRO",
+        "category":  "Privacy-First Analytics Suite",
+        "tagline":   "A BAA-covered GA4 replacement with consent and tag management — thin on ad-platform activation.",
+        "color":     "#3B6CF6",
+        "logo_char": "PP",
+        "pricing":   "Healthcare Enterprise by quote (Business from ~€35/mo has no clear BAA)",
+        "deploy":    "Days to first insights; weeks for a full GA replacement",
+        "baa":       "Enterprise / Healthcare Enterprise",
+        "ideal_for": "Health systems replacing GA4 for analytics, or needing EU / private-cloud hosting",
+        "scores": {
+            "hipaa_baa":      2,
+            "phi_redaction":  1,
+            "hc_first":       1,
+            "ocr_defensible": 1,
+            "state_laws":     1,
+            "google_capi":    1,
+            "meta_capi":      0,
+            "attribution":    1,
+            "ga4_compat":     1,
+            "cdp_compat":     1,
+            "ehr_int":        0,
+            "consent_mgmt":   2,
+            "audit_trail":    1,
+            "no_code":        1,
+            "time_to_value":  1,
+            "support":        2,
+        },
+        "win_reasons": [
+            "Full analytics UI under a BAA (familiar to former Universal Analytics users)",
+            "Hosting choice: US, EU, or private cloud on Azure",
+            "Consent, tag manager, analytics and CDP from one vendor; ISO 27001 + SOC 2",
+            "Hospital references (e.g., Michigan Medicine, Boston Medical)",
+        ],
+        "honest_gaps": "Analytics-first, not an ad-signal product: no native Meta Conversions API, Google Ads limited to offline "
+                       "click (GCLID) conversion uploads, and no automatic PHI stripping — customers must keep health terms out "
+                       "of conversion names themselves. No EHR or warehouse connectors. Audit log covers logins and admin "
+                       "changes, not data flows.",
+        "key_objection": "We're replacing GA4 with Piwik PRO, so we're covered",
+        "counter": "Piwik PRO covers analytics under a BAA — but paid media is where most pixel risk and most revenue sit. "
+                   "Ask how they'll feed Meta without a native Conversions API, and how Google Ads optimizes on GCLID-only "
+                   "uploads. Position Freshpaint as the layer that keeps ad platforms learning without PHI. If the buyer "
+                   "truly needs EU or private-cloud analytics hosting, concede that point; Piwik PRO is strong there.",
+        "last_verified": "2026-10-20",
+        "sources": ["https://piwik.pro/hipaa/", "https://piwik.pro/pricing/",
+                    "https://help.piwik.pro/support/cdp/send-conversion-data-to-google-ads-without-phi/"],
+    },
 }
 
 COMPETITOR_KEYS = list(COMPETITORS.keys())
