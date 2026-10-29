@@ -5,6 +5,7 @@ Models the annual revenue impact of removing tracking pixels without replacing t
 
 import streamlit as st
 import plotly.graph_objects as go
+from scanner.deck_content import ORG_PROFILES, org_baseline
 
 # ── CSS (same design system as PHI Risk Scanner) ──────────────────────────────
 st.markdown("""
@@ -229,15 +230,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Model constants (industry benchmarks) ─────────────────────────────────────
-ORG_PROFILES = {
-    "Digital Health / DTC":       {"roas_mult": 1.30, "attr_mult": 1.20, "label": "high pixel dependency"},
-    "Telehealth":                  {"roas_mult": 1.35, "attr_mult": 1.25, "label": "high pixel dependency"},
-    "Specialty Practice / Group":  {"roas_mult": 1.10, "attr_mult": 1.05, "label": "medium pixel dependency"},
-    "Hospital / Health System":    {"roas_mult": 0.90, "attr_mult": 1.10, "label": "lower pixel dependency"},
-    "Payer / Insurance":           {"roas_mult": 1.05, "attr_mult": 1.30, "label": "attribution-heavy"},
-}
-
 # ── Layout: inputs left, results right ───────────────────────────────────────
 left, right = st.columns([1, 1.25], gap="large")
 
@@ -267,25 +259,33 @@ with left:
     """)
     st.markdown('<div class="panel-title" style="margin-top:1rem">Your Numbers</div>', unsafe_allow_html=True)
 
-    monthly_spend = st.number_input(
-        "Monthly ad spend ($)",
-        min_value=1_000, max_value=5_000_000,
-        value=50_000, step=5_000,
-        help="Total monthly digital advertising budget across all channels",
-    )
-
     org_type = st.selectbox(
         "Organization type",
         options=list(ORG_PROFILES.keys()),
         index=0,
+        help="Sets the model multipliers and loads baseline inputs for that vertical.",
+    )
+    base = org_baseline(org_type)
+    # Keying widgets on org type reloads that vertical's baselines when it changes.
+    k = lambda name: f"{name}_{org_type}"
+    if org_type == "Pharma / Life Sciences":
+        st.caption("Pharma baselines: per-brand DTC budget, copay-card enrollment as the lead, "
+                   "first fill as the conversion. Adjust to the brand's actual numbers.")
+
+    monthly_spend = st.number_input(
+        "Monthly ad spend ($)",
+        min_value=1_000, max_value=5_000_000,
+        value=base["monthly_spend"], step=5_000,
+        help="Total monthly digital advertising budget across all channels",
+        key=k("monthly_spend"),
     )
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
     st.markdown('<div class="panel-title" style="margin-top:1rem">Channel Mix</div>', unsafe_allow_html=True)
 
-    google_pct = st.slider("Google Ads  %", 0, 100, 40, 5,
+    google_pct = st.slider("Google Ads  %", 0, 100, base["google_pct"], 5, key=k("google_pct"),
         help="Percentage of budget on Google Search/Display/YouTube")
-    meta_pct   = st.slider("Meta (Facebook/Instagram)  %", 0, 100, 30, 5,
+    meta_pct   = st.slider("Meta (Facebook/Instagram)  %", 0, 100, base["meta_pct"], 5, key=k("meta_pct"),
         help="Percentage of budget on Facebook/Instagram ads")
     other_pct  = max(0, 100 - google_pct - meta_pct)
     st.markdown(
@@ -297,13 +297,13 @@ with left:
     st.markdown('<div class="panel-title" style="margin-top:1.5rem">Assumptions</div>', unsafe_allow_html=True)
 
     remarketing_pct = st.slider(
-        "Budget on remarketing / retargeting  %", 0, 60, 25, 5,
+        "Budget on remarketing / retargeting  %", 0, 60, base["remarketing_pct"], 5, key=k("remarketing_pct"),
         help="Portion of your budget targeting people who already visited your site",
     )
     patient_ltv = st.number_input(
         "Average patient lifetime value ($)",
         min_value=100, max_value=100_000,
-        value=2_500, step=100,
+        value=base["patient_ltv"], step=100, key=k("patient_ltv"),
         help="Average revenue per patient over their care relationship",
     )
 
@@ -320,37 +320,37 @@ with left:
         cpl_current = st.number_input(
             "Current CPL with signals ($)",
             min_value=10, max_value=50_000,
-            value=250, step=10,
+            value=base["cpl"], step=10, key=k("cpl"),
             help="Your actual cost to acquire one patient lead today, with full tracking intact.",
         )
         cpl_degradation_pct = st.slider(
-            "CPL increase without signals  %", 5, 150, 40, 5,
+            "CPL increase without signals  %", 5, 150, base["cpl_degradation_pct"], 5, key=k("cpl_degradation_pct"),
             help="How much your CPL rises when conversion signals degrade. "
                  "Healthcare benchmark: 30–60% for Google Smart Bidding; higher for Meta Advantage+.",
         )
         lead_to_patient_pct = st.slider(
-            "Lead-to-patient conversion rate  %", 1, 80, 20, 1,
+            "Lead-to-patient conversion rate  %", 1, 80, base["lead_to_patient_pct"], 1, key=k("lead_to_patient_pct"),
             help="% of leads that become paying patients.",
         )
     else:
-        cpl_current = 250
-        cpl_degradation_pct = 40
-        lead_to_patient_pct = 20
+        cpl_current = base["cpl"]
+        cpl_degradation_pct = base["cpl_degradation_pct"]
+        lead_to_patient_pct = base["lead_to_patient_pct"]
 
     st.markdown('<div class="panel-title" style="margin-top:1.5rem">Sensitivity</div>', unsafe_allow_html=True)
 
     roas_deg_pct = st.slider(
-        "ROAS degradation without signals  %", 5, 40, 20, 1,
+        "ROAS degradation without signals  %", 5, 40, base["roas_deg_pct"], 1, key=k("roas_deg_pct"),
         help="How much worse your campaigns perform without conversion signal data. "
              "Industry benchmark: 15–25%. Higher if you rely on Smart Bidding.",
     )
     attr_waste_pct = st.slider(
-        "Budget waste from attribution blindness  %", 5, 30, 15, 1,
+        "Budget waste from attribution blindness  %", 5, 30, base["attr_waste_pct"], 1, key=k("attr_waste_pct"),
         help="Extra spend wasted when you can't tell which channels actually drive results. "
              "Forrester benchmark: 15–20%.",
     )
     remarketing_lift = st.slider(
-        "Remarketing conversion lift vs. cold  %", 50, 400, 200, 25,
+        "Remarketing conversion lift vs. cold  %", 50, 400, base["remarketing_lift"], 25, key=k("remarketing_lift"),
         help="How much better remarketing converts vs. cold prospecting. "
              "Healthcare benchmark: 2–4x (= 100–300% lift).",
     )

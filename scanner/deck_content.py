@@ -87,12 +87,49 @@ TONES = {
 }
 
 ORG_PROFILES = {
-    "Digital Health / DTC":      {"roas_mult": 1.30, "attr_mult": 1.20},
-    "Telehealth":                 {"roas_mult": 1.35, "attr_mult": 1.25},
-    "Specialty Practice / Group": {"roas_mult": 1.10, "attr_mult": 1.05},
-    "Hospital / Health System":   {"roas_mult": 0.90, "attr_mult": 1.10},
-    "Payer / Insurance":          {"roas_mult": 1.05, "attr_mult": 1.30},
+    "Digital Health / DTC":       {"roas_mult": 1.30, "attr_mult": 1.20, "label": "high pixel dependency"},
+    "Telehealth":                 {"roas_mult": 1.35, "attr_mult": 1.25, "label": "high pixel dependency"},
+    "Specialty Practice / Group": {"roas_mult": 1.10, "attr_mult": 1.05, "label": "medium pixel dependency"},
+    "Hospital / Health System":   {"roas_mult": 0.90, "attr_mult": 1.10, "label": "lower pixel dependency"},
+    "Payer / Insurance":          {"roas_mult": 1.05, "attr_mult": 1.30, "label": "attribution-heavy"},
+    # Branded DTC: the conversion (a filled Rx) happens offline, so attribution
+    # matters more than bidding signals, which platform health-ad rules already limit.
+    "Pharma / Life Sciences":     {"roas_mult": 1.00, "attr_mult": 1.35, "label": "attribution-heavy, offline Rx conversion"},
 }
+
+# Default model inputs. Verticals listed in ORG_BASELINES override some of them.
+DEFAULT_BASELINE = {
+    "monthly_spend":       50_000,
+    "google_pct":          40,
+    "meta_pct":            30,
+    "remarketing_pct":     25,
+    "patient_ltv":         2_500,
+    "cpl":                 250,
+    "cpl_degradation_pct": 40,
+    "lead_to_patient_pct": 20,
+    "roas_deg_pct":        20,
+    "attr_waste_pct":      15,
+    "remarketing_lift":    200,
+}
+
+# Directional benchmarks for a branded pharma DTC program.
+ORG_BASELINES = {
+    "Pharma / Life Sciences": {
+        "monthly_spend":       250_000,  # per-brand digital DTC budget
+        "google_pct":          35,       # branded + unbranded search
+        "meta_pct":            20,       # rest goes to programmatic, endemic health sites, CTV
+        "remarketing_pct":     10,       # Google and Meta restrict health-condition remarketing
+        "patient_ltv":         6_000,    # annual net revenue per persistent patient (specialty runs far higher)
+        "cpl":                 150,      # copay card / savings program enrollment
+        "lead_to_patient_pct": 30,       # enrollment to first fill
+        "attr_waste_pct":      20,       # Rx conversion happens offline, hard to tie back to media
+        "remarketing_lift":    150,
+    },
+}
+
+
+def org_baseline(org_type: str) -> dict:
+    return {**DEFAULT_BASELINE, **ORG_BASELINES.get(org_type, {})}
 
 
 @dataclass
@@ -111,10 +148,13 @@ class Brief:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def calc_roi(monthly_spend: float, org_type: str, freshpaint_cost: float = 40_000) -> dict:
     p = ORG_PROFILES.get(org_type, ORG_PROFILES["Hospital / Health System"])
+    b = org_baseline(org_type)
     ann = monthly_spend * 12
-    roas = ann * 0.70 * 0.20 * p["roas_mult"]
-    attr = ann * 0.15 * p["attr_mult"]
-    rmkt = ann * 0.25 * 2.0 / 3.0
+    pixel_fraction = (b["google_pct"] + b["meta_pct"]) / 100
+    lift = b["remarketing_lift"] / 100
+    roas = ann * pixel_fraction * (b["roas_deg_pct"] / 100) * p["roas_mult"]
+    attr = ann * (b["attr_waste_pct"] / 100) * p["attr_mult"]
+    rmkt = ann * (b["remarketing_pct"] / 100) * lift / (1 + lift)
     total = roas + attr + rmkt
     return {
         "annual_spend": ann,

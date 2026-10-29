@@ -8,6 +8,7 @@ from scanner.deck_builder import (
     PERSONAS, PERSONA_ORDER, calc_roi, generate_combined_pdf, generate_pdfs, generate_pptx,
     generate_all_zip, slugify, summarize_scan,
 )
+from scanner.deck_content import ORG_BASELINES
 from scanner.state_privacy import ALL_STATES, LAST_REVIEWED, score_state
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -273,6 +274,7 @@ with col1:
     org_type = st.selectbox("Organization type", [
         "Hospital / Health System", "Digital Health / DTC",
         "Telehealth", "Specialty Practice / Group", "Payer / Insurance",
+        "Pharma / Life Sciences",
     ])
     site_url = st.text_input(
         "Prospect website (optional)", placeholder="baptisthealth.com",
@@ -281,7 +283,8 @@ with col1:
 with col2:
     monthly_spend = st.number_input(
         "Monthly ad spend ($)", min_value=5_000, max_value=5_000_000,
-        value=75_000, step=5_000,
+        value=ORG_BASELINES.get(org_type, {}).get("monthly_spend", 75_000), step=5_000,
+        key=f"deck_spend_{org_type}",
     )
     freshpaint_cost = st.number_input(
         "Freshpaint annual quote ($)", min_value=15_000, max_value=300_000,
