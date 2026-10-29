@@ -302,9 +302,12 @@ with left:
     )
     patient_ltv = st.number_input(
         "Average patient lifetime value ($)",
-        min_value=100, max_value=100_000,
+        min_value=100, max_value=2_000_000 if org_type == PHARMA else 100_000,
         value=base["patient_ltv"], step=100, key=k("patient_ltv"),
-        help="Average revenue per patient over their care relationship",
+        help=("Net revenue per patient while on therapy. Primary care ~$3K–15K; "
+              "specialty $30K–150K+; rare disease $400K+. Use the brand's own figure if known."
+              if org_type == PHARMA else
+              "Average revenue per patient over their care relationship"),
     )
 
     st.markdown('<div class="panel-title" style="margin-top:1.5rem">Patient Loss Model</div>', unsafe_allow_html=True)
