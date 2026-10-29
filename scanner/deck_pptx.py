@@ -123,7 +123,7 @@ class DeckWriter:
         s = self.prs.slides.add_slide(self.blank)
         self._rect(s, 0, 0, SLIDE_W, SLIDE_H, DARK)
         self._rect(s, 0, 0, 0.18, SLIDE_H, rgb(accent))
-        self._text(s, 0.9, 0.7, 10, 0.4, "FRESHPAINT  |  HIPAA-COMPLIANT HEALTHCARE ANALYTICS",
+        self._text(s, 0.9, 0.7, 10, 0.4, "FRESHPAINT  |  PRIVACY-COMPLIANT HEALTHCARE ANALYTICS",
                    pt=12, color=rgb(accent), bold=True)
         self._text(s, 0.9, 2.3, 11.5, 1.6, title, pt=44, color=WHITE, bold=True)
         sub_y = 3.9 if sub_pt <= 28 else 3.2

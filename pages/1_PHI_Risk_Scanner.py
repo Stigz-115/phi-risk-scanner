@@ -856,7 +856,7 @@ else:
 st.markdown("""
 <div class="phi-footer">
   <a href="https://freshpaint.io">Freshpaint</a> &nbsp;·&nbsp;
-  HIPAA-Compliant Healthcare Analytics &nbsp;·&nbsp;
+  Privacy-Compliant Healthcare Analytics &nbsp;·&nbsp;
   <a href="https://freshpaint.io/blog">Blog</a> &nbsp;·&nbsp;
   <a href="https://freshpaint.io/privacy">Privacy</a>
   <br>

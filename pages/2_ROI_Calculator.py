@@ -650,7 +650,7 @@ st.html(f"""
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="phi-footer">
-  <a href="https://freshpaint.io">Freshpaint</a> · HIPAA-Compliant Healthcare Analytics ·
+  <a href="https://freshpaint.io">Freshpaint</a> · Privacy-Compliant Healthcare Analytics ·
   <a href="https://freshpaint.io/blog">Blog</a><br>
   Model uses industry benchmark ranges. Actual impact varies by org, channel mix, and campaign maturity.
   Not financial or legal advice.

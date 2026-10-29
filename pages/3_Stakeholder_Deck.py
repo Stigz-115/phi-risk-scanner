@@ -452,7 +452,7 @@ st.markdown(f"""
             border-top:1px solid rgba(255,255,255,0.05);
             font-size:0.65rem;color:rgba(232,237,245,0.2);line-height:1.8">
   <a href="https://freshpaint.io" style="color:rgba(0,255,178,0.4);text-decoration:none">Freshpaint</a>
-  · HIPAA-Compliant Healthcare Analytics ·
+  · Privacy-Compliant Healthcare Analytics ·
   <a href="https://freshpaint.io/blog" style="color:rgba(0,255,178,0.4);text-decoration:none">Blog</a>
   <br>Benchmarks are directional estimates. Regulatory content reviewed {LAST_REVIEWED}. Not legal or financial advice.
 </div>
