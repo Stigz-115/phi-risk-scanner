@@ -494,7 +494,7 @@ st.html(f"""
             border-top:1px solid rgba(255,255,255,0.05);
             font-size:0.62rem;color:rgba(232,237,245,0.18);line-height:1.8">
   <a href="https://freshpaint.io" style="color:rgba(0,255,178,0.35);text-decoration:none">Freshpaint</a>
-  · HIPAA-Compliant Healthcare Analytics ·
+  · Privacy-Compliant Healthcare Analytics ·
   <a href="https://freshpaint.io/blog" style="color:rgba(0,255,178,0.35);text-decoration:none">Blog</a>
   <br>State law data last reviewed {LAST_REVIEWED}; new legislation is checked monthly via LegiScan.
   Risk scores are directional. Not legal advice.

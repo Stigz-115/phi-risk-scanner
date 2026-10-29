@@ -86,13 +86,66 @@ TONES = {
     "accent": None,           # use persona accent
 }
 
+PHARMA = "Pharma / Life Sciences"
+
 ORG_PROFILES = {
-    "Digital Health / DTC":      {"roas_mult": 1.30, "attr_mult": 1.20},
-    "Telehealth":                 {"roas_mult": 1.35, "attr_mult": 1.25},
-    "Specialty Practice / Group": {"roas_mult": 1.10, "attr_mult": 1.05},
-    "Hospital / Health System":   {"roas_mult": 0.90, "attr_mult": 1.10},
-    "Payer / Insurance":          {"roas_mult": 1.05, "attr_mult": 1.30},
+    "Digital Health / DTC":       {"roas_mult": 1.30, "attr_mult": 1.20, "label": "high pixel dependency"},
+    "Telehealth":                 {"roas_mult": 1.35, "attr_mult": 1.25, "label": "high pixel dependency"},
+    "Specialty Practice / Group": {"roas_mult": 1.10, "attr_mult": 1.05, "label": "medium pixel dependency"},
+    "Hospital / Health System":   {"roas_mult": 0.90, "attr_mult": 1.10, "label": "lower pixel dependency"},
+    "Payer / Insurance":          {"roas_mult": 1.05, "attr_mult": 1.30, "label": "attribution-heavy"},
+    # Branded DTC: the conversion (a filled Rx) happens offline, so attribution
+    # matters more than bidding signals, which platform health-ad rules already limit.
+    PHARMA:                       {"roas_mult": 1.00, "attr_mult": 1.35, "label": "attribution-heavy, offline Rx conversion"},
 }
+
+# Pharma brands are usually not HIPAA covered entities; these replace HIPAA framing.
+PHARMA_PERSONA_OVERRIDES = {
+    "cmo":     {"headline": ("Keep full marketing visibility.", "Cut health-data privacy risk.")},
+    "gc":      {"blurb": "FTC Section 5 and HBNR, your state health-data laws, enforcement record"},
+    "privacy": {"headline": ("Close the tracking-vendor gap", "in your health-data program."),
+                "blurb": "Vendor inventory, consent controls, state obligations, audit evidence"},
+}
+
+# Default model inputs. Verticals listed in ORG_BASELINES override some of them.
+DEFAULT_BASELINE = {
+    "monthly_spend":       50_000,
+    "google_pct":          40,
+    "meta_pct":            30,
+    "remarketing_pct":     25,
+    "patient_ltv":         2_500,
+    "cpl":                 250,
+    "cpl_degradation_pct": 40,
+    "lead_to_patient_pct": 20,
+    "roas_deg_pct":        20,
+    "attr_waste_pct":      15,
+    "remarketing_lift":    200,
+    "freshpaint_cost":     40_000,
+    "freshpaint_cost_min": 15_000,
+    "freshpaint_cost_max": 200_000,
+}
+
+# Directional benchmarks for a branded pharma DTC program.
+ORG_BASELINES = {
+    PHARMA: {
+        "monthly_spend":       250_000,  # per-brand digital DTC budget
+        "google_pct":          35,       # branded + unbranded search
+        "meta_pct":            20,       # rest goes to programmatic, endemic health sites, CTV
+        "remarketing_pct":     10,       # Google and Meta restrict health-condition remarketing
+        "patient_ltv":         6_000,    # annual net revenue per persistent patient (specialty runs far higher)
+        "cpl":                 150,      # copay card / savings program enrollment
+        "lead_to_patient_pct": 30,       # enrollment to first fill
+        "attr_waste_pct":      20,       # Rx conversion happens offline, hard to tie back to media
+        "remarketing_lift":    150,
+        "freshpaint_cost":     200_000,  # pharma pricing floor
+        "freshpaint_cost_min": 200_000,
+        "freshpaint_cost_max": 500_000,
+    },
+}
+
+
+def org_baseline(org_type: str) -> dict:
+    return {**DEFAULT_BASELINE, **ORG_BASELINES.get(org_type, {})}
 
 
 @dataclass
@@ -111,10 +164,13 @@ class Brief:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def calc_roi(monthly_spend: float, org_type: str, freshpaint_cost: float = 40_000) -> dict:
     p = ORG_PROFILES.get(org_type, ORG_PROFILES["Hospital / Health System"])
+    b = org_baseline(org_type)
     ann = monthly_spend * 12
-    roas = ann * 0.70 * 0.20 * p["roas_mult"]
-    attr = ann * 0.15 * p["attr_mult"]
-    rmkt = ann * 0.25 * 2.0 / 3.0
+    pixel_fraction = (b["google_pct"] + b["meta_pct"]) / 100
+    lift = b["remarketing_lift"] / 100
+    roas = ann * pixel_fraction * (b["roas_deg_pct"] / 100) * p["roas_mult"]
+    attr = ann * (b["attr_waste_pct"] / 100) * p["attr_mult"]
+    rmkt = ann * (b["remarketing_pct"] / 100) * lift / (1 + lift)
     total = roas + attr + rmkt
     return {
         "annual_spend": ann,
@@ -190,10 +246,16 @@ def _state_context(states: list[str]) -> dict:
 
 # ── Persona builders ──────────────────────────────────────────────────────────
 def _exec(d: dict) -> list:
-    m, co, scan, sc = d["metrics"], d["company"], d.get("scan"), d["state_ctx"]
+    m, co, scan, sc, ph = d["metrics"], d["company"], d.get("scan"), d["state_ctx"], d["pharma"]
     sections = []
 
-    if _scan_ok(scan) and scan["trackers"]:
+    if ph and _scan_ok(scan) and scan["trackers"]:
+        situation = (
+            f"A scan of {scan['url']} found {len(scan['trackers'])} third-party tracking "
+            "technologies. Each one can send visitor data from condition, savings-program and "
+            "prescription pages to an ad or analytics platform."
+        )
+    elif _scan_ok(scan) and scan["trackers"]:
         situation = (
             f"A scan of {scan['url']} found {len(scan['trackers'])} third-party tracking "
             f"technologies, {scan['n_no_baa']} from vendors that do not sign a BAA. "
@@ -203,6 +265,12 @@ def _exec(d: dict) -> list:
         situation = (
             f"A static scan of {scan['url']} did not detect common third-party pixels. Tags loaded "
             "through a tag manager or after page load can still send health data, so a full audit is recommended."
+        )
+    elif ph:
+        situation = (
+            f"Like most pharma brands, {co} relies on ad and analytics tags to reach patients and drive "
+            "savings-program enrollment. The same tags can send condition and prescription interest to "
+            "Meta, Google and others."
         )
     else:
         situation = (
@@ -225,6 +293,9 @@ def _exec(d: dict) -> list:
     sections.append(Section("At a glance", [("stats", stats)]))
 
     why = [
+        "Federal: HIPAA rarely covers a pharma brand's consumer sites, so the FTC enforces instead: "
+        f"Section 5 and the Health Breach Notification Rule, up to ${reg.FTC_CIVIL_PENALTY_MAX:,} per violation "
+        "(GoodRx, BetterHelp, Hims & Hers)." if ph else
         "Federal: the FTC and state AGs now pursue pixels on public pages (FTC v. Hims & Hers, 2026), "
         "and OCR's guidance still covers patient portals and scheduling.",
         f"Litigation: healthcare pixel class actions keep settling, led by Kaiser Permanente at "
@@ -241,21 +312,25 @@ def _exec(d: dict) -> list:
     sections.append(Section("What each stakeholder gets", [("kv", [
         ("Marketing (CMO)", "Conversion signals keep flowing to Google, Meta and analytics; no lost optimization."),
         ("Finance (CFO)",   f"{money(m['total'])}/yr of marketing efficiency protected; payback in {payback_str(m['payback'])}."),
-        ("Legal (GC)",      "PHI is stripped before any vendor receives it, under a signed BAA."),
-        ("Privacy / CISO",  "One BAA-covered vendor replaces many; consent and audit evidence in one place."),
+        ("Legal (GC)",      "Health data is stripped before any vendor receives it, and consent is enforced."
+                            if ph else "PHI is stripped before any vendor receives it, under a signed BAA."),
+        ("Privacy / CISO",  ("One governed vendor" if ph else "One BAA-covered vendor")
+                            + " replaces many; consent and audit evidence in one place."),
         ("Engineering",     "One script replaces individual pixels; no new infrastructure to run."),
     ])]))
     sections.append(Section("Recommended next step", [("callout",
         f"Agree on a 30-minute working session with marketing, legal and IT to review {co}'s tracker "
-        "inventory and a deployment plan. Freshpaint brings the scan results and a draft BAA.")]))
+        "inventory and a deployment plan. Freshpaint brings the scan results and "
+        + ("draft data processing terms." if ph else "a draft BAA."))]))
     return sections
 
 
 def _cmo(d: dict) -> list:
-    m, co, scan = d["metrics"], d["company"], d.get("scan")
+    m, co, scan, ph = d["metrics"], d["company"], d.get("scan"), d["pharma"]
+    data = "health data" if ph else "PHI"
     sections = [
         Section("The marketing performance risk", [
-            ("text", "Healthcare organizations that remove tracking pixels without replacing them lose three "
+            ("text", ("Pharma brands" if ph else "Healthcare organizations") + " that remove tracking pixels without replacing them lose three "
                      "compounding revenue levers at once: ad algorithms stop learning, budget flows to the wrong "
                      "channels, and remarketing audiences expire."),
             ("stats", [
@@ -267,7 +342,8 @@ def _cmo(d: dict) -> list:
         Section("What going dark looks like", [("bullets", [
             "Smart Bidding and Advantage+ need steady conversion volume; without it they fall back to broad "
             "targeting and acquisition costs rise.",
-            "Last-click replaces multi-touch, so budget drifts to brand search and away from service-line campaigns.",
+            "Last-click replaces multi-touch, so budget drifts to brand search and away from "
+            + ("unbranded condition and savings-program campaigns." if ph else "service-line campaigns."),
             "Remarketing lists expire within 30-90 days, and lookalike seeds stop refreshing.",
             "A/B tests on landing pages and creative lose statistical validity.",
         ])]),
@@ -275,18 +351,21 @@ def _cmo(d: dict) -> list:
     if _scan_ok(scan) and scan["trackers"]:
         sections.append(Section(f"Trackers on {co}'s site today", [
             ("text", f"Scan of {scan['url']} ({scan['when']}). Each tag below can be routed through Freshpaint "
-                     "so campaigns keep their signal without sending PHI."),
+                     f"so campaigns keep their signal without sending {data}."),
             _tracker_table(scan, limit=8),
         ]))
     sections += [
         Section("What Freshpaint restores", [
-            ("text", "Freshpaint intercepts tracking events, strips protected health information, and forwards clean "
-                     "conversion data to the platforms you already use."),
+            ("text", "Freshpaint intercepts tracking events, strips "
+                     + ("health data" if ph else "protected health information")
+                     + ", and forwards clean conversion data to the platforms you already use."),
             ("kv", [
                 ("Google Ads / Meta", "Conversion signals flow normally; bidding keeps learning."),
                 ("Attribution",       "Multi-touch attribution maintained across channels."),
                 ("Remarketing",       "Audiences built on sanitized behavioral data."),
-                ("Analytics",         "GA4, Mixpanel and Amplitude receive events with PHI removed."),
+                ("Analytics",         f"GA4, Mixpanel and Amplitude receive events with {data} removed."),
+                ("Savings program",   "Copay-card sign-ups and HCP-locator searches tracked as clean conversions.")
+                if ph else
                 ("EHR attribution",   "Optional: tie appointments and revenue back to campaigns."),
             ]),
         ]),
@@ -304,11 +383,23 @@ def _cmo(d: dict) -> list:
 
 
 def _cfo(d: dict) -> list:
-    m, co = d["metrics"], d["company"]
+    m, co, ph = d["metrics"], d["company"], d["pharma"]
     cmp = reg.HIPAA_CMP
-    cases = [[n, a, auth] for n, a, auth, _ in reg.ENFORCEMENT_CASES[:7]]
-    return [
-        Section("The liability exposure", [
+    cases = [[n, a, auth] for n, a, auth, _ in (reg.PHARMA_CASES if ph else reg.ENFORCEMENT_CASES[:7])]
+    if ph:
+        exposure = Section("The liability exposure", [
+            ("text", "Most pharma brands sit outside HIPAA, but sharing health data through tracking tags is "
+                     "still enforced: by the FTC under Section 5 and the Health Breach Notification Rule, by state "
+                     "attorneys general, and through class actions under consumer health data and wiretap laws. "
+                     "Penalties count per violation, so every page, tag and visitor can multiply the total."),
+            ("stats", [
+                (money(reg.FTC_CIVIL_PENALTY_MAX), "FTC civil penalty per violation (max)", "bad"),
+                (money(reg.CIPA_STATUTORY_DAMAGES), "CA wiretap (CIPA) damages per violation", "bad"),
+                (reg.LARGEST_PIXEL_SETTLEMENT[0], "Largest health pixel settlement", "bad"),
+            ]),
+        ])
+    else:
+        exposure = Section("The liability exposure", [
             ("text", "Impermissible disclosure of PHI to a tracking vendor is a HIPAA violation, and every page, "
                      "tag and visitor can multiply the count. Separate exposure comes from the FTC, state attorneys "
                      "general and class actions under wiretap and privacy statutes."),
@@ -317,7 +408,9 @@ def _cfo(d: dict) -> list:
                 (money(cmp["annual_cap"]), "Annual cap per provision", "bad"),
                 (reg.LARGEST_PIXEL_SETTLEMENT[0], "Largest pixel class settlement", "bad"),
             ]),
-        ]),
+        ])
+    return [
+        exposure,
         Section("Recent enforcement and settlements", [
             ("table", {"cols": ["Organization", "Amount", "Authority / year"],
                        "widths": [40, 25, 35], "rows": cases}),
@@ -344,17 +437,19 @@ def _cfo(d: dict) -> list:
         ]),
         Section("Recommended next step", [("callout",
             "Request a customized risk assessment and pricing proposal. Freshpaint is a fixed annual "
-            "subscription with no infrastructure overhead, and the BAA is included.")]),
+            "subscription with no infrastructure overhead, and "
+            + ("data processing terms are included." if ph else "the BAA is included."))]),
     ]
 
 
 def _gc(d: dict) -> list:
-    sc, co = d["state_ctx"], d["company"]
+    sc, co, ph = d["state_ctx"], d["company"], d["pharma"]
+    timeline = reg.PHARMA_FEDERAL_TIMELINE if ph else reg.FEDERAL_TIMELINE
     sections = [
         Section("Federal landscape: where things stand", [
-            ("callout", reg.OCR_STATUS),
+            ("callout", reg.PHARMA_STATUS if ph else reg.OCR_STATUS),
             ("table", {"cols": ["Development", "Date", "What it means"], "widths": [24, 11, 65],
-                       "rows": [[n, dt, desc] for n, dt, desc in reg.FEDERAL_TIMELINE]}),
+                       "rows": [[n, dt, desc] for n, dt, desc in timeline]}),
         ]),
     ]
     if sc["laws"]:
@@ -371,7 +466,10 @@ def _gc(d: dict) -> list:
                 f"{l['score']}/100",
             ])
         sections.append(Section(f"State laws where {co} operates", [
-            ("text", "Entity-level exemptions remove HIPAA-covered entities from a law entirely. Data-level "
+            ("text", "HIPAA exemptions rarely help a pharma brand. They cover HIPAA covered entities or PHI, "
+                     "and consumer-facing brand data is usually neither, so plan as if each law below applies in full."
+                     if ph else
+                     "Entity-level exemptions remove HIPAA-covered entities from a law entirely. Data-level "
                      "exemptions cover only PHI, so a hospital's non-PHI website and marketing data is still in scope."),
             ("table", {"cols": ["State / law", "Status", "HIPAA exemption", "Private suit", "Exposure"],
                        "widths": [33, 22, 23, 10, 12], "rows": rows}),
@@ -379,31 +477,53 @@ def _gc(d: dict) -> list:
     sections += [
         Section("Enforcement record", [
             ("table", {"cols": ["Matter", "Amount", "Forum", "Conduct"], "widths": [18, 12, 18, 52],
-                       "rows": [[n, a, f, desc] for n, a, f, desc in reg.ENFORCEMENT_CASES[:8]]}),
+                       "rows": [[n, a, f, desc] for n, a, f, desc in
+                                (reg.PHARMA_CASES if ph else reg.ENFORCEMENT_CASES[:8])]}),
         ]),
         Section("Freshpaint's defensible compliance position", [("kv", [
+            ("Contract terms",    "Data processing terms for consumer health data, plus a BAA wherever the brand "
+                                  "handles PHI as a business associate (hub or copay support).")
+            if ph else
             ("Signed BAA",        "Freshpaint signs a Business Associate Agreement covering data processed through the platform."),
+            ("Health-data sanitization", "Events are scrubbed of health data before transmission to any third-party destination.")
+            if ph else
             ("PHI sanitization",  "Events are scrubbed of PHI before transmission to any third-party destination."),
             ("Audit trail",       "Logs of what was collected, sanitized and routed: documentary evidence for an inquiry."),
             ("Consent-aware",     "Routing can honor consent and opt-out signals required by state laws."),
-            ("No PHI off-ramp",   "Ad and analytics platforms receive only sanitized events, never raw PHI."),
+            ("No raw data off-ramp" if ph else "No PHI off-ramp",
+             "Ad and analytics platforms receive only sanitized events, never raw "
+             + ("health data." if ph else "PHI.")),
         ])]),
         Section("Recommended next step", [("callout",
-            "Request Freshpaint's legal package: BAA template, SOC 2 Type II report, security questionnaire "
+            "Request Freshpaint's legal package: " + ("data processing terms" if ph else "BAA template")
+            + ", SOC 2 Type II report, security questionnaire "
             "responses, and an architecture diagram for your compliance file.")]),
     ]
     return sections
 
 
 def _privacy(d: dict) -> list:
-    sc, scan, co = d["state_ctx"], d.get("scan"), d["company"]
+    sc, scan, co, ph = d["state_ctx"], d.get("scan"), d["company"], d["pharma"]
     sections = []
-    if _scan_ok(scan) and scan["trackers"]:
+    if ph and _scan_ok(scan) and scan["trackers"]:
+        sections.append(Section("Tracking-vendor inventory", [
+            ("text", f"Static scan of {scan['url']} ({scan['when']}). Each vendor below is a recipient you must "
+                     "disclose and control under state consumer health data laws. Tags loaded dynamically through "
+                     "a tag manager may not appear here; include them in your data inventory too."),
+            _tracker_table(scan, limit=10),
+        ]))
+    elif _scan_ok(scan) and scan["trackers"]:
         sections.append(Section("Tracking-vendor inventory", [
             ("text", f"Static scan of {scan['url']} ({scan['when']}). {scan['n_no_baa']} of "
                      f"{len(scan['trackers'])} vendors do not offer a BAA. Tags loaded dynamically through a tag "
                      "manager may not appear here; include them in your risk analysis too."),
             _tracker_table(scan, limit=10),
+        ]))
+    elif ph:
+        sections.append(Section("Tracking-vendor inventory", [
+            ("text", "Most pharma brands cannot produce a current list of every tag firing across brand, "
+                     "unbranded and HCP sites. Start with a scan of each public site, then add tags managed in "
+                     "GTM, savings-program and HCP-locator flows, and mobile SDKs."),
         ]))
     else:
         sections.append(Section("Tracking-vendor inventory", [
@@ -411,12 +531,19 @@ def _privacy(d: dict) -> list:
                      "apps. Start with a PHI risk scan of your public site, then add tags managed in GTM, "
                      "portal and scheduling flows, and mobile SDKs."),
         ]))
-    sections.append(Section("Controls checklist", [("bullets", [
+    checklist = [
+        "Data inventory maps every tracking technology to the consumer health data it can receive, "
+        "and the consumer health data privacy policy (WA, NV) lists those recipients.",
+        "Health data reaches ad vendors only with consent (opt-in required in WA, NV, CT and others).",
+    ] if ph else [
         "HIPAA risk analysis (45 CFR 164.308) names every tracking technology and the data it can receive.",
         "Each vendor that receives PHI has a signed BAA, or is blocked from receiving PHI.",
+    ]
+    sections.append(Section("Controls checklist", [("bullets", checklist + [
         "Consent and Global Privacy Control signals are honored before data leaves the browser.",
         "No geofencing or location targeting near health facilities (banned in WA, NV, CT, MD and others).",
-        "Breach-assessment playbook covers disclosure through pixels and SDKs.",
+        "Breach-assessment playbook covers disclosure through pixels and SDKs"
+        + (", including the FTC Health Breach Notification Rule where a brand app or tool applies." if ph else "."),
         "Quarterly re-scan; tags drift as marketing adds campaigns.",
     ])]))
     if sc["laws"]:
@@ -430,21 +557,23 @@ def _privacy(d: dict) -> list:
         ])]))
     sections += [
         Section("How Freshpaint supports your program", [("kv", [
-            ("Risk analysis",   "A documented data flow for every tracking destination."),
-            ("Vendor risk",     "One BAA-covered vendor sits in front of many ad and analytics tools."),
+            ("Data inventory" if ph else "Risk analysis", "A documented data flow for every tracking destination."),
+            ("Vendor risk",     ("One governed vendor" if ph else "One BAA-covered vendor")
+                                + " sits in front of many ad and analytics tools."),
             ("Consent",         "Consent and opt-out signals applied server-side, consistently."),
             ("Audit evidence",  "Logs of collection, sanitization and routing for audits or inquiries."),
             ("Security",        "SOC 2 Type II, encryption in transit and at rest, SSO and MFA."),
         ])]),
         Section("Recommended next step", [("callout",
-            f"Schedule a vendor-risk review: Freshpaint maps {co}'s current tags, identifies which receive PHI, "
+            f"Schedule a vendor-risk review: Freshpaint maps {co}'s current tags, identifies which receive "
+            + ("health data, " if ph else "PHI, ") +
             "and provides security documentation for your third-party risk process.")]),
     ]
     return sections
 
 
 def _cto(d: dict) -> list:
-    scan, co = d.get("scan"), d["company"]
+    scan, co, ph = d.get("scan"), d["company"], d["pharma"]
     sections = [
         Section("How Freshpaint works", [
             ("text", "Freshpaint is an event routing layer, not a replacement analytics platform. A single script "
@@ -453,8 +582,9 @@ def _cto(d: dict) -> list:
             ("flow", [
                 "Visitor's browser",
                 "Freshpaint SDK  (replaces individual pixels)",
-                "Freshpaint HIPAA infrastructure  (PHI stripped, consent applied)",
-                "Google Ads  |  Meta CAPI  |  GA4  |  CDP / warehouse  |  EHR",
+                "Freshpaint HIPAA infrastructure  ("
+                + ("health data" if ph else "PHI") + " stripped, consent applied)",
+                "Google Ads  |  Meta CAPI  |  GA4  |  CDP / warehouse  |  " + ("CRM" if ph else "EHR"),
             ]),
         ]),
         Section("Implementation plan", [
@@ -468,7 +598,8 @@ def _cto(d: dict) -> list:
                 ("Day 1",    "Replace pixel tags with one Freshpaint tag via GTM or direct install."),
                 ("Day 1-2",  "Define allowlists of safe event properties; everything else is blocked by default."),
                 ("Week 1",   "Connect destinations: Google Ads, Meta, analytics and CDP accounts."),
-                ("Week 2",   "Optional: connect EHR/scheduling for closed-loop attribution."),
+                ("Week 2",   "Optional: connect CRM or savings-program data for closed-loop attribution."
+                             if ph else "Optional: connect EHR/scheduling for closed-loop attribution."),
             ]),
         ]),
     ]
@@ -477,7 +608,8 @@ def _cto(d: dict) -> list:
     sections += [
         Section("Security and compliance posture", [("kv", [
             ("SOC 2 Type II",    "Annual third-party audit; report available under NDA."),
-            ("HIPAA BAA",        "Executed at contract signature."),
+            ("HIPAA BAA",        "Available where the brand handles PHI (hub, copay support); executed at signature."
+                                 if ph else "Executed at contract signature."),
             ("Data residency",   "PHI-bearing events processed on US infrastructure."),
             ("Encryption",       "TLS 1.2+ in transit; AES-256 at rest."),
             ("Access controls",  "Role-based access, SSO/SAML, MFA, admin audit log."),
@@ -509,6 +641,7 @@ def prepare(data: dict) -> dict:
         d["metrics"] = calc_roi(d.get("monthly_spend", 50_000),
                                 d.get("org_type", "Hospital / Health System"),
                                 d.get("freshpaint_cost", 40_000))
+    d["pharma"] = d.get("org_type") == PHARMA
     d["state_ctx"] = _state_context(d["states"])
     d["date_str"] = date.today().strftime("%B %Y")
     return d
@@ -516,7 +649,10 @@ def prepare(data: dict) -> dict:
 
 def build_brief(key: str, data: dict) -> Brief:
     d = data if "state_ctx" in data else prepare(data)
-    return Brief(key=key, persona=PERSONAS[key], sections=_BUILDERS[key](d))
+    persona = PERSONAS[key]
+    if d["pharma"]:
+        persona = {**persona, **PHARMA_PERSONA_OVERRIDES.get(key, {})}
+    return Brief(key=key, persona=persona, sections=_BUILDERS[key](d))
 
 
 def build_briefs(data: dict, personas: list[str] | None = None) -> list[Brief]:

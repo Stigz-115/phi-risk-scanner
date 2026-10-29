@@ -80,7 +80,7 @@ class BriefPDF(FPDF):
         self.set_font("Helvetica", "B", 7)
         self.set_text_color(*self.accent)
         self.set_xy(MARGIN, 6)
-        self.cell(0, 4, "FRESHPAINT  |  HIPAA-COMPLIANT HEALTHCARE ANALYTICS")
+        self.cell(0, 4, "FRESHPAINT  |  PRIVACY-COMPLIANT HEALTHCARE ANALYTICS")
         company = safe(self.data.get("company", "Your Organization"))
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*_DIM)

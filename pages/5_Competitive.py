@@ -329,7 +329,7 @@ st.html("""
             border-top:1px solid rgba(255,255,255,0.05);
             font-size:0.62rem;color:rgba(232,237,245,0.18);line-height:1.8">
   <a href="https://freshpaint.io" style="color:rgba(0,255,178,0.35);text-decoration:none">Freshpaint</a>
-  · HIPAA-Compliant Healthcare Analytics ·
+  · Privacy-Compliant Healthcare Analytics ·
   Competitor data maintained by Freshpaint sales team. Not legal advice.
 </div>
 """)

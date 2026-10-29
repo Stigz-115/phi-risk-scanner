@@ -90,3 +90,37 @@ SOURCES = [
     "https://www.bakerdonelson.com/ftc-targets-hims-hers-over-health-data-sharing-the-tracking-tools-are-now-part-of-the-case",
     "https://www.hipaajournal.com/advocate-aurora-health-settles-pixel-lawsuit-for-12-25-million/",
 ]
+
+# ── Pharma / life sciences (non-HIPAA) ───────────────────────────────────────
+# Manufacturers are usually not HIPAA covered entities. Consumer-facing brand
+# data (condition pages, savings / copay sign-ups, HCP locators) falls under the
+# FTC Act, state consumer health data laws and wiretap statutes instead. They
+# act as business associates only for some hub and copay-support functions.
+FTC_CIVIL_PENALTY_MAX = 53_088        # 16 CFR 1.98; FTC kept 2025 levels for 2026
+CIPA_STATUTORY_DAMAGES = 5_000        # Cal. Penal Code 637.2, per violation
+
+PHARMA_STATUS = (
+    "Most pharma brands are not HIPAA covered entities, so OCR's tracking guidance rarely "
+    "reaches their consumer sites. That is not a safe harbor: the FTC enforces health-data "
+    "sharing under Section 5 and the Health Breach Notification Rule, state consumer health "
+    "data laws (Washington, Nevada, Connecticut and others) apply in full, and wiretap suits "
+    "target pixels on prescription and checkout pages."
+)
+
+PHARMA_FEDERAL_TIMELINE = [
+    ("FTC v. GoodRx", "Feb 2023",
+     "First Health Breach Notification Rule penalty: prescription and medication data shared "
+     "with Meta and Google through pixels and SDKs, without a HIPAA nexus."),
+    ("FTC v. BetterHelp", "Mar 2023",
+     "$7.8M for sharing health questionnaire data with advertisers despite privacy promises."),
+    ("FTC Health Breach Notification Rule", "Jul 2024",
+     "Amended rule treats unauthorized sharing of health app data with advertisers as a breach. "
+     "Civil penalties above $50,000 per violation."),
+    ("FTC v. Hims & Hers", "Jul 2026",
+     "FTC, joined by California and Utah, alleges pixels shared treatment and prescription "
+     "data with ad platforms. Enforcement reaches consumer journeys with no HIPAA nexus."),
+]
+
+# Matters brought outside HIPAA (FTC, state AG); the closest analogues for a pharma brand.
+PHARMA_CASE_NAMES = ["GoodRx", "BetterHelp", "Cerebral", "Healthline Media", "Hims & Hers"]
+PHARMA_CASES = [c for c in ENFORCEMENT_CASES if c[0] in PHARMA_CASE_NAMES]
