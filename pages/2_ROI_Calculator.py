@@ -5,7 +5,7 @@ Models the annual revenue impact of removing tracking pixels without replacing t
 
 import streamlit as st
 import plotly.graph_objects as go
-from scanner.deck_content import ORG_PROFILES, org_baseline
+from scanner.deck_content import ORG_PROFILES, PHARMA, org_baseline
 
 # ── CSS (same design system as PHI Risk Scanner) ──────────────────────────────
 st.markdown("""
@@ -268,7 +268,7 @@ with left:
     base = org_baseline(org_type)
     # Keying widgets on org type reloads that vertical's baselines when it changes.
     k = lambda name: f"{name}_{org_type}"
-    if org_type == "Pharma / Life Sciences":
+    if org_type == PHARMA:
         st.caption("Pharma baselines: per-brand DTC budget, copay-card enrollment as the lead, "
                    "first fill as the conversion. Adjust to the brand's actual numbers.")
 
@@ -357,9 +357,10 @@ with left:
 
     freshpaint_cost = st.slider(
         "Freshpaint annual cost ($)",
-        min_value=15_000, max_value=200_000,
-        value=40_000, step=5_000,
-        help="Use your quoted price or a typical range: $25K–$150K/year",
+        min_value=base["freshpaint_cost_min"], max_value=base["freshpaint_cost_max"],
+        value=base["freshpaint_cost"], step=5_000,
+        help="Use your quoted price. Typical range: $25K–$150K/year; pharma starts at $200K/year.",
+        key=k("freshpaint_cost"),
     )
 
 # ── Calculations ──────────────────────────────────────────────────────────────

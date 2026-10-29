@@ -8,7 +8,7 @@ from scanner.deck_builder import (
     PERSONAS, PERSONA_ORDER, calc_roi, generate_combined_pdf, generate_pdfs, generate_pptx,
     generate_all_zip, slugify, summarize_scan,
 )
-from scanner.deck_content import ORG_BASELINES
+from scanner.deck_content import ORG_BASELINES, PHARMA, org_baseline
 from scanner.state_privacy import ALL_STATES, LAST_REVIEWED, score_state
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -274,7 +274,7 @@ with col1:
     org_type = st.selectbox("Organization type", [
         "Hospital / Health System", "Digital Health / DTC",
         "Telehealth", "Specialty Practice / Group", "Payer / Insurance",
-        "Pharma / Life Sciences",
+        PHARMA,
     ])
     site_url = st.text_input(
         "Prospect website (optional)", placeholder="baptisthealth.com",
@@ -287,8 +287,11 @@ with col2:
         key=f"deck_spend_{org_type}",
     )
     freshpaint_cost = st.number_input(
-        "Freshpaint annual quote ($)", min_value=15_000, max_value=300_000,
-        value=40_000, step=5_000,
+        "Freshpaint annual quote ($)",
+        min_value=org_baseline(org_type)["freshpaint_cost_min"],
+        max_value=max(300_000, org_baseline(org_type)["freshpaint_cost_max"]),
+        value=org_baseline(org_type)["freshpaint_cost"], step=5_000,
+        key=f"deck_quote_{org_type}",
     )
 
 st.markdown('<div class="form-section">Geography & Exposure</div>', unsafe_allow_html=True)
